@@ -15,23 +15,28 @@ FizzBuzz Regeln:
 - Sonst -> Zahl als String
 """
 
+
 def fizzbuzz(n: int) -> str:
     """
     TODO: Implementieren Sie diese Funktion mit TDD
-    
+
     Args:
         n: Eine positive Ganzzahl
-        
+
     Returns:
         "Fizz", "Buzz", "FizzBuzz" oder die Zahl als String
     """
-    # TODO: Implementierung mit TDD
-    def fizzbuzzreturn (n):
-        if((n % 3) and (n % 5)):
-            return "FizzBuzz"
-        elif(n % 3):
-            return "Fizz"
-        elif(n % 5):
-            return "Buzz"
-        else:
-            return str(n)
+    # Behandlung von 0 als Sonderfall: Tests erwarten hier "0" (nicht Fizz/Buzz)
+    if n == 0:
+        return "0"
+
+    # Korrekte Teilbarkeitsprüfung: erst prüfen, ob durch 3 und 5 teilbar
+    if n % 3 == 0 and n % 5 == 0:
+        return "FizzBuzz"
+    if n % 3 == 0:
+        return "Fizz"
+    if n % 5 == 0:
+        return "Buzz"
+
+    # Standardfall: Zahl als String zurückgeben
+    return str(n)
