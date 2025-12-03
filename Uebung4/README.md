@@ -19,7 +19,7 @@ Die Übung erfolgt in zwei Teams mit Pair Programming.
 - Hätten Sie die Lösung ohne TDD genauso implementiert?
 
 ### Phase 3: API-Mocking mit TDD (ca. 25–35 Minuten)
-- **Team A:** Weather-API mocken (Temperatur → Wetterkategorie) - Fiona, Chris
+- **Team A:** Weather-API mocken (Temperatur → Wetterkategorie) - Fiona
 - **Team B:** Currency-API mocken (Wechselkurs → Bewertung) - Simon
 - Testgetriebene Entwicklung mit gemockten API-Calls
 

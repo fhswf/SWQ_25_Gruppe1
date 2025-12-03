@@ -1,6 +1,7 @@
 """
 Implementierung: Weather-API Service
 ====================================
+Bearbeiter: FALR
 
 TODO: Team A - Implementiert get_weather_category() hier!
 
@@ -16,7 +17,7 @@ Hinweise:
 - Startet mit minimalster Implementierung!
 """
 
-#import requests
+import requests
 
 
 def get_weather_category(city: str) -> str:
@@ -35,27 +36,36 @@ def get_weather_category(city: str) -> str:
         - "warm" (25-30°C)
         - "heiß" (> 30°C)
     """
-    # TODO: Team A - Implementierung hier!
-    # Tipp: Startet mit einfachstem Fall (z.B. nur "angenehm" zurückgeben)
-    # Erweitert schrittweise basierend auf Tests!
-    #
-    # API-Call-Code:
-    #url = f"https://api.weather.com/current?city={city}"
-    #response = requests.get(url, timeout=5)
-    #response.raise_for_status()
-    #data = response.json()
-    #temperature = data.get("temperature")
+    # Baut die URL für den API-Aufruf. In Tests wird `requests.get` gemockt.
+    url = f"https://api.weather.com/current?city={city}"
 
-    def checkTemperature(temperature):
-        if (temperature <= 0):
-            return "frostgefahr"
-        elif (temperature > 0 and temperature <= 10):
-            return "kalt"
-        elif (temperature > 10 and temperature <= 15):
-            return "kühl"
-        elif (temperature > 15 and temperature <= 24):
-            return "angenehm"
-        elif (temperature > 24 and temperature <= 30):
-            return "warm"
-        elif (temperature > 30):
-            return "heiß"
+    # API-Aufruf mit Timeout; Fehler werden an den Aufrufer weitergegeben (Tests können patchen)
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    data = response.json()
+
+    # Temperatur aus der Antwort extrahieren
+    temperature = data.get("temperature")
+    if temperature is None:
+        # Keine Temperatur im Payload -> Fehler, damit Tests/Caller das merken
+        raise ValueError(
+            "API-Response enthält keine 'temperature'-Information")
+
+    # Kategorisierung gemäß Aufgabenstellung
+    # < 0: frostgefahr
+    # 0-10: kalt
+    # 11-15: kühl
+    # 16-24: angenehm
+    # 25-30: warm
+    # > 30: heiß
+    if temperature < 0:
+        return "frostgefahr"
+    if 0 <= temperature <= 10:
+        return "kalt"
+    if 11 <= temperature <= 15:
+        return "kühl"
+    if 16 <= temperature <= 24:
+        return "angenehm"
+    if 25 <= temperature <= 30:
+        return "warm"
+    return "heiß"

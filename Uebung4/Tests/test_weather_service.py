@@ -39,48 +39,35 @@ class TestWeatherService:
     3. Refactoring
     """
 
-    def test_placeholder(self):
+    @pytest.mark.parametrize("city,temp,expected", [
+        ("Berlin", 20, "angenehm"),
+        ("Warschau", -5, "frostgefahr"),
+        ("Kiew", 5, "kalt"),
+        ("Wien", 13, "kühl"),
+        ("Rom", 28, "warm"),
+        ("Barcelona", 35, "heiß"),
+    ])
+    def test_weather_categories(self, city, temp, expected):
+        """Parametrisierter Test: mocked API-Response liefert verschiedene Temperaturen
+        Erwartet: korrekte Kategorie als String und korrekter API-Aufruf mit Timeout
         """
-        Placeholder - ersetzt durch echte Tests!
-
-        Beispiel-Tests:
-        - Temperatur 20°C → "angenehm"
-        - Temperatur -5°C → "frostgefahr"
-        - Temperatur 5°C → "kalt"
-        - Temperatur 13°C → "kühl"
-        - Temperatur 28°C → "warm"
-        - Temperatur 35°C → "heiß"
-        """
-        # assert True, "TODO: Durch echte Tests ersetzen"
-
-    def test_angenehm(self):
-        assert weather("Berlin") == "angenehm"
-
-    def test_frostgefahr(self):
-        assert weather("Warschau") == "frostgefahr"
-
-    def test_kalt(self):
-        assert weather("Kiew") == "kalt"
-
-    def test_kühl(self):
-        assert weather("Wien") == "kühl"
-
-    def test_warm(self):
-        assert weather("Rom") == "warm"
-
-    def test_heiß(self):
-        assert weather("Barcelona") == "heiß"
-
-    # TODO: Team A - Beispiel für ersten echten Test:
-    def test_angenehm_ext(self):
-        """TDD-Zyklus 1: RED von [Name] um [Zeit]"""
         with patch('requests.get') as mock_get:
-            # Simuliere API-Response
-            mock_get.return_value.json.return_value = {"temperature": 20}
+            mock_get.return_value.json.return_value = {"temperature": temp}
 
-            assert weather("Berlin") == "angenehm"
+            result = weather(city)
+            assert result == expected
 
-            # Optional: Verifiziere API-Aufruf
-            mock_get.assert_called_once()
+            # Prüfe, dass die API mit URL und Timeout aufgerufen wurde
+            mock_get.assert_called_once_with(
+                f"https://api.weather.com/current?city={city}", timeout=5)
 
-    # TODO: Team A - Weitere Tests für alle Temperaturkategorien hinzufügen!
+    def test_missing_temperature_raises(self):
+        """Wenn die API keine 'temperature' liefert, wird ein ValueError ausgelöst."""
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.json.return_value = {}
+
+            with pytest.raises(ValueError):
+                weather("Berlin")
+
+            mock_get.assert_called_once_with(
+                "https://api.weather.com/current?city=Berlin", timeout=5)
