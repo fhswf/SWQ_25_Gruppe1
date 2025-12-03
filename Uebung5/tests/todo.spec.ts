@@ -1,37 +1,144 @@
 import { expect, Page, test } from '@playwright/test';
 
-test.describe('TodoMVC Tests', () => {
-    test.beforeEach(async ({ page }: { page: Page }) => {
-        await page.goto('https://demo.playwright.dev/todomvc/');
+const TODO_URL = 'https://demo.playwright.dev/todomvc/';
+
+// Helper: fügt ein Todo via Eingabe und Enter hinzu
+async function addTodo(page: Page, text: string) {
+    const input = page.getByPlaceholder('What needs to be done?');
+    await input.fill(text);
+    await input.press('Enter');
+}
+
+
+test.describe('TodoMVC - Grundlegend', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto(TODO_URL);
     });
 
-    test("Ein neues Todo wird hinzugefügt", async ({ page }: { page: Page }) => {
-        const newTodoInput = page.getByPlaceholder('What needs to be done?');
-        await newTodoInput.fill('Mein erstes Todo');
-        await newTodoInput.press('Enter');
-
+    test('Ein Todo hinzufügen', async ({ page }) => {
+        // Erwartet: Nach Eingabe erscheint der Eintrag in der Liste und Zähler ist korrekt
+        await addTodo(page, 'Mein erstes Todo');
         await expect(page.getByText('Mein erstes Todo')).toBeVisible();
+        await expect(page.locator('.todo-count')).toHaveText('1 item left');
     });
 
-    test('leerer text', async ({ page }: { page: Page }) => {
-        const newTodoInput = page.getByPlaceholder('What needs to be done?');
-        await newTodoInput.click();
-        await newTodoInput.click();
-        await newTodoInput.fill('');
-        await newTodoInput.press('Enter');
+    test('Mehrere Todos hinzufügen', async ({ page }) => {
+        await addTodo(page, 'Todo 1');
+        await addTodo(page, 'Todo 2');
+        await addTodo(page, 'Todo 3');
+
+        const items = page.locator('.todo-list li');
+        await expect(items).toHaveCount(3);
+        await expect(page.locator('.todo-count')).toHaveText('3 items left');
     });
 
-    test('lange eingabe', async ({ page }: { page: Page }) => {
-        const newTodoInput = page.getByPlaceholder('What needs to be done?');
-        await newTodoInput.click();
-        await newTodoInput.click();
-        await newTodoInput.fill('Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh. Donec sodales sagittis magna. Sed consequat, leo eget bibendum sodales, augue velit cursus nunc,');
-        await newTodoInput.press('Enter');
-    });
-    
+    test('Checkboxen setzen und items left prüfen', async ({ page }) => {
+        await addTodo(page, 'A');
+        await addTodo(page, 'B');
 
-    // test("mein erster test", async ({}))
-    
-    // TODO: Fügen Sie hier Ihre Tests ein
-    // Folgen Sie den Anleitungen in der README.md
+        const firstToggle = page.locator('.todo-list li').first().locator('input.toggle');
+        await firstToggle.check();
+        await expect(firstToggle).toBeChecked();
+
+        // Nach einem gesetzten Haken sollte der Zähler 1 item left anzeigen
+        await expect(page.locator('.todo-count')).toHaveText('1 item left');
+    });
 });
+
+
+test.describe('TodoMVC - Löschen & Toggle-All', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto(TODO_URL);
+    });
+
+    test('Todo via X (Hover) löschen', async ({ page }) => {
+        await addTodo(page, 'zu löschen');
+        const item = page.locator('.todo-list li').first();
+        await item.hover();
+        // Löschen-Button ist ein button.destroy
+        await item.locator('button.destroy').click();
+        await expect(page.getByText('zu löschen')).toHaveCount(0);
+    });
+
+    test('Toggle-All setzt alle Todos auf erledigt / nicht erledigt', async ({ page }) => {
+        await addTodo(page, 'T1');
+        await addTodo(page, 'T2');
+
+        const toggleAll = page.locator('.toggle-all');
+        // Toggle all: setzt alle auf erledigt
+        await toggleAll.click();
+        await expect(page.locator('.todo-list li .toggle')).toHaveCount(2);
+        await expect(page.locator('.todo-list li .completed')).toHaveCount(2);
+
+        // Nochmal klicken klappt: setzt alle wieder zurück (nicht erledigt)
+        await toggleAll.click();
+        await expect(page.locator('.todo-list li.completed')).toHaveCount(0);
+    });
+
+    test('Clear completed entfernt erledigte Einträge', async ({ page }) => {
+        await addTodo(page, 'c1');
+        await addTodo(page, 'c2');
+        // markiere beide
+        await page.locator('.todo-list li').first().locator('input.toggle').check();
+        await page.locator('.todo-list li').nth(1).locator('input.toggle').check();
+
+        // Clear completed erscheint und entfernt erledigte
+        await page.getByRole('button', { name: 'Clear completed' }).click();
+        await expect(page.locator('.todo-list li')).toHaveCount(0);
+    });
+});
+
+
+test.describe('TodoMVC - Filter', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto(TODO_URL);
+        await addTodo(page, 'a1');
+        await addTodo(page, 'a2');
+        await addTodo(page, 'a3');
+        // markiere das zweite als erledigt
+        await page.locator('.todo-list li').nth(1).locator('input.toggle').check();
+    });
+
+    test('Active filter zeigt nur offene Todos', async ({ page }) => {
+        await page.getByRole('link', { name: 'Active' }).click();
+        await expect(page.locator('.todo-list li')).toHaveCount(2);
+        await expect(page.locator('.todo-count')).toHaveText('2 items left');
+    });
+
+    test('Completed filter zeigt nur erledigte Todos', async ({ page }) => {
+        await page.getByRole('link', { name: 'Completed' }).click();
+        await expect(page.locator('.todo-list li')).toHaveCount(1);
+    });
+
+    test('All filter zeigt alle Todos', async ({ page }) => {
+        await page.getByRole('link', { name: 'All' }).click();
+        await expect(page.locator('.todo-list li')).toHaveCount(3);
+    });
+});
+
+
+test.describe('TodoMVC - Edge Cases', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto(TODO_URL);
+    });
+
+    test('Leere Eingabe (Enter ohne Text) erzeugt kein Todo', async ({ page }) => {
+        const input = page.getByPlaceholder('What needs to be done?');
+        await input.fill('');
+        await input.press('Enter');
+        await expect(page.locator('.todo-list li')).toHaveCount(0);
+    });
+
+    test('Sehr langer Text wird akzeptiert', async ({ page }) => {
+        const longText = 'A'.repeat(1000);
+        await addTodo(page, longText);
+        await expect(page.getByText(longText)).toBeVisible();
+    });
+
+    test('Clear completed nicht sichtbar ohne Todos', async ({ page }) => {
+        // ohne Todos gibt es keinen Button 'Clear completed'
+        await expect(page.getByRole('button', { name: 'Clear completed' })).toBeHidden();
+    });
+});
+
+// Struktur/Refactor: Helper-Funktion `addTodo` und Konstanten verwendet
